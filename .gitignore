@@ -4,3 +4,5 @@
 HttpAsynWork.pro.user
 Makefile.Debug
 Makefile.Release
+debug/
+release/
