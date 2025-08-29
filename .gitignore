@@ -1,0 +1,6 @@
+*.dll
+.qtc_clangd/
+.qmake.stash
+HttpAsynWork.pro.user
+Makefile.Debug
+Makefile.Release
