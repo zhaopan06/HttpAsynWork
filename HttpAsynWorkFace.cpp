@@ -39,3 +39,8 @@ void HttpAsynWorkFace::setHeaders(const QVariantMap heads)
 {
     HttpAsynWork::getInstance()->setHeaders(heads);
 }
+
+void HttpAsynWorkFace::setToken(QString token)
+{
+    HttpAsynWork::getInstance()->setToken(token);
+}

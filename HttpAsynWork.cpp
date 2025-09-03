@@ -29,6 +29,7 @@ HttpAsynWork::HttpAsynWork(QObject* parent)
 
 HttpAsynWork::~HttpAsynWork()
 {
+    m_manager->deleteLater();
     m_workerThread.quit();
     m_workerThread.wait();
 }
@@ -37,7 +38,7 @@ void HttpAsynWork::submitRequest(RequestMethod method, const QString& url,
                                  const ResponseCallback& successCallback,
                                  const ErrorCallback& errorCallback,
                                  const QVariantMap &body,
-                                 QObject* context /* = nullptr */)
+                                 QObject* context)
 {
     QMutexLocker locker(&m_queueMutex);
 
@@ -94,24 +95,25 @@ void HttpAsynWork::handleRequest()
         break;
     }
 
+    QPointer<QObject> targetContext = QPointer<QObject>(task.context);
+
     if (reply)
     {
-        connect(timeoutTimer.data(), &QTimer::timeout, [=]() {
+        connect(timeoutTimer.data(), &QTimer::timeout, this, [=]() {
             reply->abort();
-            if(task.context)
+            if(targetContext)
             {
                 if(task.errorCallback)
                 {
-                    QMetaObject::invokeMethod(task.context, [=]() {
+                    QMetaObject::invokeMethod(targetContext, [=]() {
                         QString toastMsg = QStringLiteral("请求超时");
                         task.errorCallback(-1,toastMsg);
                     }, Qt::QueuedConnection);
                 }
             }
-
         });
-        timeoutTimer->start();
 
+        timeoutTimer->start();
         QObject::connect(reply, &QNetworkReply::finished, reply, [=]{
 
             timeoutTimer->stop();
@@ -120,77 +122,80 @@ void HttpAsynWork::handleRequest()
             QJsonParseError json_error;
             QJsonDocument jsonDocument = QJsonDocument::fromJson(response, &json_error);
 
-            QPointer<QObject> targetContext = task.context ? QPointer<QObject>(task.context) :  nullptr;
             if (reply->error() != QNetworkReply::NoError)
             {
-                if(task.errorCallback)
+                if(targetContext)
                 {
-                    const int errorCode = reply->error();
-                    const QString errorMsg = reply->errorString();
-                    const auto errorCallback = task.errorCallback;
-                    QMetaObject::invokeMethod(targetContext, [=]() {
-                        if (!targetContext)
-                        {
-                            qDebug() << "Context object no longer exists";
-                            return;
-                        }
-                        try {
-                            errorCallback(errorCode, errorMsg);
-                        } catch (...) {
-                            qCritical() << "Exception in error callback";
-                        }
-                    }, Qt::QueuedConnection);
+                    if(task.errorCallback)
+                    {
+                        QMetaObject::invokeMethod(targetContext, [=]() {
+                            const int errorCode = reply->error();
+                            const QString errorMsg = QStringLiteral("网络错误");
+                            task.errorCallback(errorCode,errorMsg);
+                        }, Qt::QueuedConnection);
+                    }
                 }
             }
             else if(json_error.error != QJsonParseError::NoError)
             {
-                if(task.errorCallback)
+                if(targetContext)
                 {
-                    const QString errorMsg = json_error.errorString();
-                    const auto errorCallback = task.errorCallback;
-                    QMetaObject::invokeMethod(targetContext, [=]() {
-                        errorCallback(-1, "JSON parse error: " + errorMsg);
-                    }, Qt::QueuedConnection);
+                    if(task.errorCallback)
+                    {
+                        QMetaObject::invokeMethod(targetContext, [=]() {
+                            const QString errorMsg = QStringLiteral("json错误，请重新请求");
+                            const auto errorCallback = task.errorCallback;
+                            errorCallback(-1,  errorMsg);
+                        }, Qt::QueuedConnection);
+                    }
                 }
             }
             else if(jsonDocument["code"].toInt() != 1)
             {
-                if(jsonDocument["code"].toInt() == 0 || jsonDocument["code"].toInt() == 356)
+                if(targetContext)
                 {
-                    emit error_msg_box_text(jsonDocument["message"].toString(),jsonDocument["code"].toInt());
-                }
-
-                if(task.errorCallback)
-                {
-                    QMetaObject::invokeMethod(targetContext, [=]() {
-                        task.errorCallback(jsonDocument["code"].toInt(),
-                                           jsonDocument["message"].toString());
-                    }, Qt::QueuedConnection);
+                    if(task.errorCallback)
+                    {
+                        QMetaObject::invokeMethod(targetContext, [=]() {
+                            task.errorCallback(jsonDocument["code"].toInt(),jsonDocument["message"].toString());
+                        }, Qt::QueuedConnection);
+                    }
                 }
             }
             else if(task.successCallback)
             {
-                QMetaObject::invokeMethod(targetContext, [=]() {
-                    task.successCallback(jsonDocument.toVariant().toMap());
-                }, Qt::QueuedConnection);
+                if(targetContext)
+                {
+                    QMetaObject::invokeMethod(targetContext, [=]() {
+                        task.successCallback(jsonDocument.toVariant().toMap());
+                    }, Qt::QueuedConnection);
+                }
             }
 
             reply->deleteLater();
             m_activeRequests--;
 
-            QMetaObject::invokeMethod(this, &HttpAsynWork::handleRequest, Qt::QueuedConnection);
+            if(m_activeRequests > 0)
+                QMetaObject::invokeMethod(this, &HttpAsynWork::handleRequest, Qt::QueuedConnection);
         });
     }
     else
     {
         m_activeRequests--;
-        QString errorMsg = "Failed to create request";
-        const auto errorCallback = task.errorCallback;
-        QMetaObject::invokeMethod(task.context, [=]() {
-            errorCallback(-1, "error: " + errorMsg);
-        }, Qt::QueuedConnection);
+        if(targetContext)
+        {
+            if(task.errorCallback)
+            {
+                QMetaObject::invokeMethod(targetContext, [=]() {
+                    const int errorCode = reply->error();
+                    const QString errorMsg = QStringLiteral("网络错误");
+                    task.errorCallback(errorCode,errorMsg);
+                }, Qt::QueuedConnection);
+            }
+        }
 
-        QMetaObject::invokeMethod(this, &HttpAsynWork::handleRequest, Qt::QueuedConnection);
+        if(m_activeRequests > 0)
+            QMetaObject::invokeMethod(this, &HttpAsynWork::handleRequest, Qt::QueuedConnection);
     }
 }
 

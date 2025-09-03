@@ -41,9 +41,9 @@ public:
     void submitRequest(RequestMethod method,
                        const QString& url,
                        const ResponseCallback& successCallback,
-                       const ErrorCallback& errorCallback = nullptr,
-                       const QVariantMap& body = QVariantMap(),
-                       QObject* context = nullptr);
+                       const ErrorCallback& errorCallback,
+                       const QVariantMap& body,
+                       QObject* context);
 
     // 配置接口
     void setMaxConcurrentRequests(int max);
@@ -55,7 +55,6 @@ public:
     void setToken(QString token);
 signals:
     void requestAdded();
-    void error_msg_box_text(QString,int);
 
 private:
     explicit HttpAsynWork(QObject* parent = nullptr);

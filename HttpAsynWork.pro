@@ -16,7 +16,6 @@ SOURCES += \
 
 HEADERS += \
     HttpAsynWorkFace.h \
-    HttpAsynWork_global.h \
     HttpAsynWork.h
 
 # Default rules for deployment.
