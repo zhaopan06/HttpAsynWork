@@ -1,5 +1,5 @@
-#ifndef HTTPASYNWORK_H
-#define HTTPASYNWORK_H
+#ifndef HTTPASYNCWORKER_H
+#define HTTPASYNCWORKER_H
 
 #include <QObject>
 #include <QNetworkAccessManager>
@@ -10,7 +10,7 @@
 #include <QVariantMap>
 #include <functional>
 
-class HttpAsynWork : public QObject
+class HttpAsyncWorker : public QObject
 {
     Q_OBJECT
 public:
@@ -34,16 +34,16 @@ public:
         int timeout = 30000;  // 请求超时时间(毫秒)
     };
 
-    static HttpAsynWork* getInstance();
-    ~HttpAsynWork();
+    static HttpAsyncWorker* getInstance();
+    ~HttpAsyncWorker();
 
     // 提交请求接口
     void submitRequest(RequestMethod method,
                        const QString& url,
                        const ResponseCallback& successCallback,
-                       const ErrorCallback& errorCallback,
-                       const QVariantMap& body,
-                       QObject* context);
+                       const ErrorCallback& errorCallback = nullptr,
+                       const QVariantMap& body = QVariantMap(),
+                       QObject* context = nullptr);
 
     // 配置接口
     void setMaxConcurrentRequests(int max);
@@ -51,29 +51,31 @@ public:
     void setRequestTimeout(int milliseconds);
 
     // 头部管理接口
-    void setHeaders(const QVariantMap heads);
+    void setHeaders(const QVariantMap map);
+    void addHeader(const QString& key, const QString& value);
+    void removeHeader(const QString& key);
+    void clearHeaders();
     void setToken(QString token);
+
 signals:
     void requestAdded();
 
 private:
-    explicit HttpAsynWork(QObject* parent = nullptr);
+    explicit HttpAsyncWorker(QObject* parent = nullptr);
     QNetworkRequest createRequest(const QString& url, const QVariantMap &body = QVariantMap());
 
     QNetworkAccessManager* m_manager;
     QQueue<RequestTask> m_requestQueue;
-    QMutex m_queueMutex;
-    int m_activeRequests = 0;
+    QMutex m_queueMutex;    
+    std::atomic<int> m_activeRequests{0};
     int m_maxConcurrentRequests = 4;
     int m_requestTimeout = 30000;  // 默认30秒超时
     QString m_baseUrl;
     QThread m_workerThread;
-    QVariantMap m_heads;
-    QString m_token;
-
+    QVariantMap m_map;  // 自定义头部
+    QString m_token = "";
 private slots:
     void handleRequest();
 };
 
-
-#endif // HTTPASYNWORK_H
+#endif // HTTPASYNCWORKER_H

@@ -1,8 +1,8 @@
 #include "HttpAsynWorkFace.h"
-#include "HttpAsynWork.h"
+#include "HttpAsyncWorker.h"
 
-HttpAsynWorkFace::HttpAsynWorkFace(QObject *parent)
-    : QObject{parent}
+HttpAsynWorkFace::HttpAsynWorkFace()
+    : QObject{nullptr}
 {}
 
 HttpAsynWorkFace::~HttpAsynWorkFace()
@@ -12,35 +12,35 @@ HttpAsynWorkFace::~HttpAsynWorkFace()
 
 void HttpAsynWorkFace::initInterFace()
 {
-    HttpAsynWork::getInstance();
+    HttpAsyncWorker::getInstance();
 }
 
 void HttpAsynWorkFace::submitRequest(RequestMethod method, const QString &url, const ResponseCallback &successCallback, const ErrorCallback &errorCallback, const QVariantMap &body, QObject *context)
 {
-    HttpAsynWork::getInstance()->submitRequest(static_cast<HttpAsynWork::RequestMethod>(method),url,successCallback,errorCallback,body,context);
+    HttpAsyncWorker::getInstance()->submitRequest(static_cast<HttpAsyncWorker::RequestMethod>(method),url,successCallback,errorCallback,body,context);
 }
 
 void HttpAsynWorkFace::setMaxConcurrentRequests(int max)
 {
-    HttpAsynWork::getInstance()->setMaxConcurrentRequests(max);
+    HttpAsyncWorker::getInstance()->setMaxConcurrentRequests(max);
 }
 
 void HttpAsynWorkFace::setBaseUrl(const QString& baseUrl)
 {
-    HttpAsynWork::getInstance()->setBaseUrl(baseUrl);
+    HttpAsyncWorker::getInstance()->setBaseUrl(baseUrl);
 }
 
 void HttpAsynWorkFace::setRequestTimeout(int milliseconds)
 {
-    HttpAsynWork::getInstance()->setRequestTimeout(milliseconds);
+    HttpAsyncWorker::getInstance()->setRequestTimeout(milliseconds);
 }
 
 void HttpAsynWorkFace::setHeaders(const QVariantMap heads)
 {
-    HttpAsynWork::getInstance()->setHeaders(heads);
+    HttpAsyncWorker::getInstance()->setHeaders(heads);
 }
 
 void HttpAsynWorkFace::setToken(QString token)
 {
-    HttpAsynWork::getInstance()->setToken(token);
+    HttpAsyncWorker::getInstance()->setToken(token);
 }

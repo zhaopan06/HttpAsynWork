@@ -15,7 +15,7 @@ class HTTPASYNWORK_EXPORT  HttpAsynWorkFace : public QObject
 {
     Q_OBJECT
 public:
-    HttpAsynWorkFace(QObject *parent);
+    HttpAsynWorkFace();
     ~HttpAsynWorkFace();
 
     enum class RequestMethod {
